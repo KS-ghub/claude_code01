@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マリオカート風レーシングゲーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>🏎️ レーシングゲーム 🏎️</h1>
+        </div>
+
+        <div class="game-info">
+            <div class="info-item">
+                <span class="label">ラップ:</span>
+                <span id="lap">1 / 3</span>
+            </div>
+            <div class="info-item">
+                <span class="label">タイム:</span>
+                <span id="time">0:00.0</span>
+            </div>
+            <div class="info-item">
+                <span class="label">スピード:</span>
+                <span id="speed">0</span>
+            </div>
+            <div class="info-item">
+                <span class="label">順位:</span>
+                <span id="position">1位</span>
+            </div>
+            <div class="info-item">
+                <span class="label">アイテム:</span>
+                <span id="item">なし</span>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div class="controls">
+            <h3>操作方法</h3>
+            <p>↑↓ : 加速/減速</p>
+            <p>←→ : 左右に移動</p>
+            <p>スペース : アイテム使用</p>
+            <p>R : リスタート</p>
+        </div>
+
+        <div id="gameOver" class="game-over hidden">
+            <h2>ゲーム終了！</h2>
+            <p>最終タイム: <span id="finalTime"></span></p>
+            <p>順位: <span id="finalPosition"></span></p>
+            <button onclick="game.restart()">もう一度プレイ</button>
+        </div>
+
+        <div id="startScreen" class="start-screen">
+            <h2>マリオカート風レーシングゲーム</h2>
+            <p>3ラップでゴールを目指そう！</p>
+            <button onclick="game.start()">スタート</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
