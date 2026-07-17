@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# Claude Code のローカル設定(ユーザー固有のため共有しない)
+.claude/settings.local.json
+
+# シミュレーション実行時の生成物(手元で再生成する)
+match_full_half.csv
+match_full_half_*.csv
+match_result.txt
+match_result_*.txt
+match_10games_result.txt
