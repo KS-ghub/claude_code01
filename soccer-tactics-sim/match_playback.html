@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>試合再生ビューア — match_full_half.csv</title>
+<style>
+  :root {
+    --bg: #eef1ec;
+    --panel: #ffffff;
+    --panel-2: #f6f8f4;
+    --ink: #12201a;
+    --ink-dim: #57685d;
+    --ink-faint: #8b988f;
+    --border: #d7ddd2;
+    --accent: #d9782f;
+    --accent-ink: #ffffff;
+    --turf-1: #2f7a45;
+    --turf-2: #2a6e3d;
+    --turf-line: rgba(255,255,255,0.85);
+    --team-a: #dc9a2e;
+    --team-a-ink: #2f2004;
+    --team-b: #3f8fd1;
+    --team-b-ink: #ffffff;
+    --ball-fill: #fbf7ee;
+    --ball-stroke: #1c2a22;
+    --shadow: 0 10px 28px rgba(20,30,25,0.14);
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1210;
+      --panel: #121c16;
+      --panel-2: #16211a;
+      --ink: #edf2ec;
+      --ink-dim: #9fb0a4;
+      --ink-faint: #66766c;
+      --border: #22302a;
+      --accent: #ff9d4d;
+      --accent-ink: #241202;
+      --turf-1: #1c5030;
+      --turf-2: #18452a;
+      --turf-line: rgba(255,255,255,0.7);
+      --team-a: #eeb653;
+      --team-a-ink: #241a03;
+      --team-b: #6fb5ea;
+      --team-b-ink: #04202f;
+      --ball-fill: #fffdf6;
+      --ball-stroke: #0b1210;
+      --shadow: 0 12px 32px rgba(0,0,0,0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1210;
+    --panel: #121c16;
+    --panel-2: #16211a;
+    --ink: #edf2ec;
+    --ink-dim: #9fb0a4;
+    --ink-faint: #66766c;
+    --border: #22302a;
+    --accent: #ff9d4d;
+    --accent-ink: #241202;
+    --turf-1: #1c5030;
+    --turf-2: #18452a;
+    --turf-line: rgba(255,255,255,0.7);
+    --team-a: #eeb653;
+    --team-a-ink: #241a03;
+    --team-b: #6fb5ea;
+    --team-b-ink: #04202f;
+    --ball-fill: #fffdf6;
+    --ball-stroke: #0b1210;
+    --shadow: 0 12px 32px rgba(0,0,0,0.55);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1ec;
+    --panel: #ffffff;
+    --panel-2: #f6f8f4;
+    --ink: #12201a;
+    --ink-dim: #57685d;
+    --ink-faint: #8b988f;
+    --border: #d7ddd2;
+    --accent: #d9782f;
+    --accent-ink: #ffffff;
+    --turf-1: #2f7a45;
+    --turf-2: #2a6e3d;
+    --turf-line: rgba(255,255,255,0.85);
+    --team-a: #dc9a2e;
+    --team-a-ink: #2f2004;
+    --team-b: #3f8fd1;
+    --team-b-ink: #ffffff;
+    --ball-fill: #fbf7ee;
+    --ball-stroke: #1c2a22;
+    --shadow: 0 10px 28px rgba(20,30,25,0.14);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Yu Gothic", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) 1fr;
+    gap: 20px;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; }
+  }
+
+  h1 {
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0 0 2px;
+    text-wrap: balance;
+  }
+  .subtitle {
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    margin: 0 0 18px;
+    line-height: 1.5;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+
+  .eyebrow {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 8px;
+  }
+
+  /* ---- file loader ---- */
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 18px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+    background: var(--panel-2);
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, var(--panel-2));
+  }
+  .dropzone svg { display: block; margin: 0 auto 8px; opacity: .55; }
+  .dropzone .main-txt { font-size: 13px; font-weight: 600; }
+  .dropzone .sub-txt { font-size: 11.5px; color: var(--ink-dim); margin-top: 3px; line-height: 1.5; }
+  .dropzone input { display: none; }
+  .file-loaded {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 12px; color: var(--ink-dim);
+  }
+  .file-loaded .name { color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-loaded button {
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--ink-dim);
+    border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; flex-shrink: 0;
+  }
+  .file-loaded button:hover { color: var(--ink); border-color: var(--ink-faint); }
+
+  /* ---- transport ---- */
+  .transport-row { display: flex; align-items: center; gap: 6px; }
+  .btn {
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--ink);
+    border-radius: 8px;
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--ink-faint); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .btn.play {
+    width: auto; padding: 0 16px; gap: 7px;
+    background: var(--accent); color: var(--accent-ink); border-color: transparent;
+    font-weight: 700; font-size: 12.5px;
+  }
+  .btn.play:hover { filter: brightness(1.06); }
+
+  .scrubber-wrap { display: flex; flex-direction: column; gap: 4px; }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; border-radius: 2px;
+    background: var(--border); outline: none; margin: 8px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid var(--panel);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid var(--panel);
+  }
+  .scrub-labels {
+    display: flex; justify-content: space-between;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums;
+  }
+
+  .speed-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--ink-dim);
+    border-radius: 999px; padding: 5px 11px; font-size: 12px; cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip:hover { color: var(--ink); }
+  .chip.active { background: var(--accent); border-color: transparent; color: var(--accent-ink); font-weight: 700; }
+
+  /* ---- scoreboard ---- */
+  .scoreboard {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+  }
+  .team-score { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+  .team-tag {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+    padding: 2px 8px; border-radius: 999px;
+  }
+  .team-tag.a { background: var(--team-a); color: var(--team-a-ink); }
+  .team-tag.b { background: var(--team-b); color: var(--team-b-ink); }
+  .score-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 34px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .score-sep { color: var(--ink-faint); font-size: 20px; font-weight: 300; padding-top: 8px; }
+  .clock {
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px; color: var(--ink-dim); font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+
+  .event-ticker {
+    font-size: 12.5px; color: var(--ink); line-height: 1.5;
+    min-height: 2.4em;
+    padding: 8px 10px;
+    background: var(--panel-2);
+    border-radius: 8px;
+    border-left: 3px solid var(--accent);
+  }
+  .event-ticker .ev-time {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--ink-faint); font-size: 10.5px; margin-right: 6px;
+  }
+
+  /* ---- legend ---- */
+  .legend { display: flex; flex-direction: column; gap: 7px; font-size: 11.5px; color: var(--ink-dim); }
+  .legend-row { display: flex; align-items: center; gap: 8px; }
+  .swatch { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
+  .swatch.a { background: var(--team-a); }
+  .swatch.b { background: var(--team-b); }
+  .swatch.ball { background: var(--ball-fill); border: 1.5px solid var(--ball-stroke); }
+  .swatch.zone { background: none; border: 1.5px dashed var(--accent); }
+
+  /* ---- pitch ---- */
+  .pitch-wrap {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .pitch-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    box-shadow: var(--shadow);
+  }
+  .pitch-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 65 / 105;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+  .empty-state {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; text-align: center; padding: 20px;
+    color: rgba(255,255,255,0.92);
+    background: linear-gradient(180deg, var(--turf-1), var(--turf-2));
+    font-size: 13px;
+  }
+  .empty-state .big { font-weight: 700; font-size: 15px; }
+  .empty-state .small { font-size: 12px; opacity: .85; max-width: 32ch; line-height: 1.5; }
+
+  .hint-row {
+    display: flex; justify-content: space-between; gap: 12px;
+    font-size: 11px; color: var(--ink-faint);
+  }
+  kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: var(--panel-2); border: 1px solid var(--border); border-bottom-width: 2px;
+    border-radius: 4px; padding: 1px 5px; font-size: 10.5px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="stack">
+    <div>
+      <h1>試合再生ビューア</h1>
+      <p class="subtitle">match_full_half.csv を読み込んで、1秒刻みの選手・ボールの動きをコマ送り再生します。</p>
+    </div>
+
+    <div class="panel stack" style="gap:10px;">
+      <p class="eyebrow">CSVファイル</p>
+      <label class="dropzone" id="dropzone" tabindex="0">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3M12 3v12M7 8l5-5 5 5"/></svg>
+        <div class="main-txt">match_full_half.csv をドロップ</div>
+        <div class="sub-txt">またはクリックして選択<br>(run_match.py 実行後にフォルダ内に生成されます)</div>
+        <input type="file" id="fileInput" accept=".csv,text/csv">
+      </label>
+      <div class="file-loaded" id="fileLoaded" style="display:none;">
+        <span class="name" id="fileName"></span>
+        <button id="reloadBtn" type="button">変更</button>
+      </div>
+    </div>
+
+    <div class="panel stack" id="transportPanel" style="gap:12px; opacity:.45; pointer-events:none;">
+      <p class="eyebrow">再生</p>
+      <div class="transport-row">
+        <button class="btn" id="homeBtn" title="最初へ" aria-label="最初へ">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM20 6L10 12l10 6z"/></svg>
+        </button>
+        <button class="btn" id="prevBtn" title="1コマ戻る" aria-label="1コマ戻る">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 6L8 12l10 6z"/></svg>
+        </button>
+        <button class="btn play" id="playBtn" aria-label="再生・一時停止">
+          <svg id="playIcon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+          <span id="playLabel">再生</span>
+        </button>
+        <button class="btn" id="nextBtn" title="1コマ進む" aria-label="1コマ進む">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6l10 6-10 6z"/></svg>
+        </button>
+        <button class="btn" id="endBtn" title="最後へ" aria-label="最後へ">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 6l10 6-10 6z"/></svg>
+        </button>
+      </div>
+
+      <div class="scrubber-wrap">
+        <input type="range" id="scrubber" min="0" max="0" value="0" step="1">
+        <div class="scrub-labels"><span id="scrubTime">00:00</span><span id="scrubTotal">45:00</span></div>
+      </div>
+
+      <div class="speed-row" id="speedRow">
+        <button class="chip" data-speed="1">1×</button>
+        <button class="chip" data-speed="4">4×</button>
+        <button class="chip active" data-speed="8">8×</button>
+        <button class="chip" data-speed="16">16×</button>
+        <button class="chip" data-speed="30">30×</button>
+      </div>
+    </div>
+
+    <div class="panel stack" id="scorePanel" style="gap:10px; opacity:.45;">
+      <p class="eyebrow">スコア</p>
+      <div class="scoreboard">
+        <div class="team-score">
+          <span class="team-tag a">A</span>
+          <span class="score-num" id="scoreA">0</span>
+        </div>
+        <span class="score-sep">—</span>
+        <div class="team-score">
+          <span class="team-tag b">B</span>
+          <span class="score-num" id="scoreB">0</span>
+        </div>
+      </div>
+      <div class="clock" id="clockLabel">前半 00:00</div>
+      <div class="event-ticker" id="eventTicker">試合開始前</div>
+    </div>
+
+    <div class="panel legend">
+      <p class="eyebrow" style="margin-bottom:2px;">凡例</p>
+      <div class="legend-row"><span class="swatch a"></span>チームA（下から上へ攻撃）</div>
+      <div class="legend-row"><span class="swatch b"></span>チームB（上から下へ攻撃）</div>
+      <div class="legend-row"><span class="swatch ball"></span>ボール保持者（白い縁取りが太い選手）</div>
+      <div class="legend-row"><span class="swatch zone"></span>ゴールエリア（中央±3m）とシュートゾーン</div>
+    </div>
+  </aside>
+
+  <main class="pitch-wrap">
+    <div class="pitch-card">
+      <div class="pitch-frame" id="pitchFrame">
+        <canvas id="pitchCanvas"></canvas>
+        <div class="empty-state" id="emptyState">
+          <div class="big">⚽ ピッチは準備完了</div>
+          <div class="small">左のパネルから match_full_half.csv を読み込むと、45分間の全選手の動きをここに再生します。</div>
+        </div>
+      </div>
+    </div>
+    <div class="hint-row">
+      <span>ドラッグ操作可: <kbd>スクラバー</kbd>で任意の時刻へ移動</span>
+      <span><kbd>Space</kbd> 再生/停止　<kbd>←</kbd><kbd>→</kbd> 1秒送り</span>
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var ROWS = 105, COLS = 65;
+  var GOAL_HALF_WIDTH = 3;      // ball_logic.GOAL_ZONE_HALF_WIDTH
+  var SHOOT_ZONE_DEPTH = 20;    // ball_logic.SHOOT_ZONE_DEPTH
+  var CENTER_COL = 33;
+
+  var frames = [];              // [{t, players:[...], event, scoreA, scoreB}]
+  var currentFrame = 0;
+  var playing = false;
+  var speed = 8;                // simulated seconds per real second
+  var accMs = 0;
+  var lastTs = 0;
+
+  var dropzone = document.getElementById("dropzone");
+  var fileInput = document.getElementById("fileInput");
+  var fileLoaded = document.getElementById("fileLoaded");
+  var fileName = document.getElementById("fileName");
+  var reloadBtn = document.getElementById("reloadBtn");
+  var emptyState = document.getElementById("emptyState");
+  var transportPanel = document.getElementById("transportPanel");
+  var scorePanel = document.getElementById("scorePanel");
+  var scrubber = document.getElementById("scrubber");
+  var scrubTime = document.getElementById("scrubTime");
+  var scrubTotal = document.getElementById("scrubTotal");
+  var playBtn = document.getElementById("playBtn");
+  var playIcon = document.getElementById("playIcon");
+  var playLabel = document.getElementById("playLabel");
+  var homeBtn = document.getElementById("homeBtn");
+  var endBtn = document.getElementById("endBtn");
+  var prevBtn = document.getElementById("prevBtn");
+  var nextBtn = document.getElementById("nextBtn");
+  var speedRow = document.getElementById("speedRow");
+  var scoreAEl = document.getElementById("scoreA");
+  var scoreBEl = document.getElementById("scoreB");
+  var clockLabel = document.getElementById("clockLabel");
+  var eventTicker = document.getElementById("eventTicker");
+  var canvas = document.getElementById("pitchCanvas");
+  var ctx = canvas.getContext("2d");
+  var pitchFrame = document.getElementById("pitchFrame");
+
+  var css = getComputedStyle(document.documentElement);
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function fmtClock(sec) {
+    var m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  // ---------------- CSV parsing ----------------
+  function parseCSV(text) {
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    var lines = text.split(/\r\n|\n/);
+    if (!lines.length) return [];
+    var header = lines[0].split(",");
+    var idx = {};
+    for (var i = 0; i < header.length; i++) idx[header[i]] = i;
+
+    var map = new Map();
+    for (var li = 1; li < lines.length; li++) {
+      var line = lines[li];
+      if (!line) continue;
+      var cols = line.split(",");
+      var t = Number(cols[idx.time_sec]);
+      var f = map.get(t);
+      if (!f) {
+        f = { t: t, players: [], event: "", scoreA: 0, scoreB: 0 };
+        map.set(t, f);
+      }
+      var ev = cols[idx.event];
+      if (ev) f.event = ev;
+      f.scoreA = Number(cols[idx.score_a]);
+      f.scoreB = Number(cols[idx.score_b]);
+      f.players.push({
+        team: cols[idx.team],
+        number: Number(cols[idx.number]),
+        row: Number(cols[idx.row]),
+        col: Number(cols[idx.col]),
+        hasBall: cols[idx.has_ball] === "True" || cols[idx.has_ball] === "true"
+      });
+    }
+    var out = Array.from(map.values());
+    out.sort(function (a, b) { return a.t - b.t; });
+    return out;
+  }
+
+  function loadFile(file) {
+    if (!file) return;
+    fileName.textContent = file.name;
+    fileLoaded.style.display = "flex";
+    dropzone.style.display = "none";
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      frames = parseCSV(e.target.result);
+      currentFrame = 0;
+      if (!frames.length) return;
+      scrubber.max = String(frames.length - 1);
+      scrubber.value = "0";
+      scrubTotal.textContent = fmtClock(frames[frames.length - 1].t);
+      transportPanel.style.opacity = "1";
+      transportPanel.style.pointerEvents = "auto";
+      scorePanel.style.opacity = "1";
+      emptyState.style.display = "none";
+      resizeCanvas();
+      renderFrame(0);
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  fileInput.addEventListener("change", function (e) { loadFile(e.target.files[0]); });
+  reloadBtn.addEventListener("click", function () {
+    dropzone.style.display = "block";
+    fileLoaded.style.display = "none";
+    fileInput.value = "";
+  });
+  ["dragenter", "dragover"].forEach(function (evName) {
+    dropzone.addEventListener(evName, function (e) { e.preventDefault(); dropzone.classList.add("drag"); });
+  });
+  ["dragleave", "drop"].forEach(function (evName) {
+    dropzone.addEventListener(evName, function (e) { e.preventDefault(); dropzone.classList.remove("drag"); });
+  });
+  dropzone.addEventListener("drop", function (e) {
+    var f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  });
+  dropzone.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+  });
+
+  // ---------------- rendering ----------------
+  function resizeCanvas() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = pitchFrame.clientWidth, h = pitchFrame.clientHeight;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (frames.length) renderFrame(currentFrame);
+  }
+  window.addEventListener("resize", resizeCanvas);
+
+  function project(row, col, w, h) {
+    var x = ((col - 0.5) / COLS) * w;
+    var y = h - ((row - 0.5) / ROWS) * h;
+    return [x, y];
+  }
+
+  function drawPitch(w, h) {
+    var turf1 = cssVar("--turf-1"), turf2 = cssVar("--turf-2"), line = cssVar("--turf-line");
+    // mown stripes across the length (row axis), 14 bands
+    var bands = 14;
+    for (var i = 0; i < bands; i++) {
+      ctx.fillStyle = (i % 2 === 0) ? turf1 : turf2;
+      ctx.fillRect(0, h * i / bands, w, h / bands + 0.5);
+    }
+
+    ctx.strokeStyle = line;
+    ctx.lineWidth = Math.max(1, w * 0.0035);
+    ctx.globalAlpha = 0.9;
+
+    // outer boundary
+    var m = w * 0.01;
+    ctx.strokeRect(m, m, w - 2 * m, h - 2 * m);
+
+    // halfway line + center circle
+    ctx.beginPath();
+    ctx.moveTo(m, h / 2); ctx.lineTo(w - m, h / 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, w * 0.14, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, w * 0.01, 0, Math.PI * 2);
+    ctx.fillStyle = line; ctx.fill();
+
+    // shoot zones (reference box) at both ends
+    var boxHalfW = (19 / COLS) * w;
+    var boxDepth = (SHOOT_ZONE_DEPTH / ROWS) * h;
+    ctx.setLineDash([w * 0.012, w * 0.01]);
+    ctx.strokeRect(w / 2 - boxHalfW, h - m - boxDepth, boxHalfW * 2, boxDepth);
+    ctx.strokeRect(w / 2 - boxHalfW, m, boxHalfW * 2, boxDepth);
+    ctx.setLineDash([]);
+
+    // goal-line judging zone (center +/- 3m) highlighted at each end
+    var goalHalfW = (GOAL_HALF_WIDTH / COLS) * w;
+    var accent = cssVar("--accent");
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = Math.max(2.5, w * 0.009);
+    ctx.beginPath(); ctx.moveTo(w / 2 - goalHalfW, m); ctx.lineTo(w / 2 + goalHalfW, m); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w / 2 - goalHalfW, h - m); ctx.lineTo(w / 2 + goalHalfW, h - m); ctx.stroke();
+
+    ctx.globalAlpha = 1;
+
+    // orientation labels
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "700 " + Math.max(10, w * 0.024) + "px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("B GOAL", w / 2, m + w * 0.035);
+    ctx.fillText("A GOAL", w / 2, h - m - w * 0.015);
+  }
+
+  function renderFrame(fi) {
+    if (!frames.length) return;
+    fi = Math.max(0, Math.min(frames.length - 1, fi));
+    currentFrame = fi;
+    var f = frames[fi];
+
+    var dpr = window.devicePixelRatio || 1;
+    var w = canvas.width / dpr, h = canvas.height / dpr;
+    ctx.clearRect(0, 0, w, h);
+    drawPitch(w, h);
+
+    var teamA = cssVar("--team-a"), teamAInk = cssVar("--team-a-ink");
+    var teamB = cssVar("--team-b"), teamBInk = cssVar("--team-b-ink");
+    var ballFill = cssVar("--ball-fill"), ballStroke = cssVar("--ball-stroke");
+    var r = Math.max(7, w * 0.022);
+    var holder = null;
+
+    for (var i = 0; i < f.players.length; i++) {
+      var p = f.players[i];
+      var xy = project(p.row, p.col, w, h);
+      var isA = p.team === "A";
+      ctx.beginPath();
+      ctx.arc(xy[0], xy[1], r, 0, Math.PI * 2);
+      ctx.fillStyle = isA ? teamA : teamB;
+      ctx.fill();
+      ctx.lineWidth = p.hasBall ? Math.max(2.5, r * 0.35) : Math.max(1, r * 0.12);
+      ctx.strokeStyle = p.hasBall ? ballFill : "rgba(0,0,0,0.25)";
+      ctx.stroke();
+
+      ctx.fillStyle = isA ? teamAInk : teamBInk;
+      ctx.font = "700 " + Math.max(8, r * 0.92) + "px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(p.number), xy[0], xy[1] + 0.5);
+
+      if (p.hasBall) holder = xy;
+    }
+
+    if (holder) {
+      ctx.beginPath();
+      ctx.arc(holder[0] + r * 0.85, holder[1] - r * 0.85, r * 0.32, 0, Math.PI * 2);
+      ctx.fillStyle = ballFill;
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = ballStroke;
+      ctx.stroke();
+    }
+
+    // UI readouts
+    scoreAEl.textContent = f.scoreA;
+    scoreBEl.textContent = f.scoreB;
+    clockLabel.textContent = "前半 " + fmtClock(f.t);
+    scrubTime.textContent = fmtClock(f.t);
+    scrubber.value = String(fi);
+
+    if (f.event && f.event !== "HOLD" && f.event !== "CARRY") {
+      eventTicker.innerHTML = '<span class="ev-time">' + fmtClock(f.t) + '</span>' + describeEvent(f.event);
+    }
+  }
+
+  function describeEvent(code) {
+    var map = {
+      GOAL: "⚽ ゴール！",
+      SHOT_SAVED: "🧤 シュート、GKセーブ",
+      SHOT_OFF_TARGET: "↗️ シュート、枠外",
+      INTERCEPT: "✋ インターセプト、攻守交代",
+      PASS_OK: "→ パス成功",
+      PASS_FAIL: "→ パス失敗、攻守交代",
+      CROSS_OK: "⤴ クロス成功",
+      CROSS_FAIL: "⤴ クロス失敗、攻守交代",
+      CUTBACK_OK: "↩ カットバック成功",
+      CUTBACK_FAIL: "↩ カットバック失敗、攻守交代",
+      BACKPASS_OK: "⇤ バックパス成功(GKへ)",
+      BACKPASS_FAIL: "⇤ バックパス失敗、攻守交代",
+      GK_CLAIM: "🧤 GKが飛び出してキャッチ",
+      BUILDUP_OK: "⇪ GKビルドアップ配球成功",
+      BUILDUP_FAIL: "⇪ GK配球失敗、攻守交代",
+      THROUGH_OK: "⚡ スルーパスで裏抜け成功",
+      THROUGH_FAIL: "⚡ スルーパス失敗、攻守交代",
+      OFFSIDE: "🚩 オフサイド"
+    };
+    return map[code] || code;
+  }
+
+  // ---------------- transport ----------------
+  function setPlaying(v) {
+    playing = v && frames.length > 0;
+    playIcon.innerHTML = playing
+      ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
+      : '<path d="M6 4l14 8-14 8z"/>';
+    playLabel.textContent = playing ? "一時停止" : "再生";
+    if (playing) { lastTs = 0; requestAnimationFrame(loop); }
+  }
+
+  function loop(ts) {
+    if (!playing) return;
+    if (!lastTs) lastTs = ts;
+    var dt = ts - lastTs;
+    lastTs = ts;
+    var msPerFrame = 1000 / speed;
+    accMs += dt;
+    var advanced = false;
+    while (accMs >= msPerFrame) {
+      accMs -= msPerFrame;
+      currentFrame++;
+      advanced = true;
+      if (currentFrame >= frames.length - 1) {
+        currentFrame = frames.length - 1;
+        setPlaying(false);
+        break;
+      }
+    }
+    if (advanced) renderFrame(currentFrame);
+    if (playing) requestAnimationFrame(loop);
+  }
+
+  playBtn.addEventListener("click", function () { setPlaying(!playing); });
+  homeBtn.addEventListener("click", function () { setPlaying(false); renderFrame(0); });
+  endBtn.addEventListener("click", function () { setPlaying(false); renderFrame(frames.length - 1); });
+  prevBtn.addEventListener("click", function () { setPlaying(false); renderFrame(currentFrame - 1); });
+  nextBtn.addEventListener("click", function () { setPlaying(false); renderFrame(currentFrame + 1); });
+  scrubber.addEventListener("input", function () { setPlaying(false); renderFrame(Number(scrubber.value)); });
+
+  speedRow.addEventListener("click", function (e) {
+    var chip = e.target.closest(".chip");
+    if (!chip) return;
+    speed = Number(chip.dataset.speed);
+    Array.prototype.forEach.call(speedRow.children, function (c) { c.classList.toggle("active", c === chip); });
+    accMs = 0;
+  });
+
+  window.addEventListener("keydown", function (e) {
+    if (!frames.length) return;
+    if (e.key === " ") { e.preventDefault(); setPlaying(!playing); }
+    else if (e.key === "ArrowRight") { setPlaying(false); renderFrame(currentFrame + 1); }
+    else if (e.key === "ArrowLeft") { setPlaying(false); renderFrame(currentFrame - 1); }
+  });
+
+  new ResizeObserver(resizeCanvas).observe(pitchFrame);
+  resizeCanvas();
+})();
+</script>
+
+</body>
+</html>
